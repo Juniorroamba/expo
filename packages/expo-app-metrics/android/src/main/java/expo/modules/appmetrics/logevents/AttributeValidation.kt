@@ -60,7 +60,10 @@ data class SanitizedLogAttributes(
  * Each rule warns with its own message so the developer can tell at a glance
  * which rule fired.
  */
-internal fun sanitizeLogEventAttributes(attributes: Map<String, Any?>?): SanitizedLogAttributes {
+internal fun sanitizeLogEventAttributes(
+  attributes: Map<String, Any?>?,
+  source: String = "logEvent"
+): SanitizedLogAttributes {
   if (attributes == null) {
     return SanitizedLogAttributes(attributes = null, droppedCount = 0)
   }
@@ -68,6 +71,7 @@ internal fun sanitizeLogEventAttributes(attributes: Map<String, Any?>?): Sanitiz
   val sanitized = mutableMapOf<String, Any?>()
   var emptyKeyDrops = 0
   val reservedKeyDrops = mutableListOf<String>()
+  val nonFiniteDrops = mutableListOf<String>()
 
   for ((key, value) in attributes) {
     val trimmedKey = key.trim()
@@ -77,6 +81,12 @@ internal fun sanitizeLogEventAttributes(attributes: Map<String, Any?>?): Sanitiz
     }
     if (RESERVED_ATTRIBUTE_PATTERNS.any { it.matches(trimmedKey) }) {
       reservedKeyDrops += key
+      continue
+    }
+    // Mirrors iOS, where a non-finite value makes `JSONSerialization` raise an uncatchable
+    // ObjC exception at serialization time. JSON has no representation for either.
+    if (value is Double && !value.isFinite()) {
+      nonFiniteDrops += key
       continue
     }
     sanitized[trimmedKey] = value
@@ -98,20 +108,27 @@ internal fun sanitizeLogEventAttributes(attributes: Map<String, Any?>?): Sanitiz
   if (emptyKeyDrops > 0) {
     Log.w(
       TAG,
-      "[AppMetrics] logEvent dropped $emptyKeyDrops attribute(s) with empty or whitespace-only keys."
+      "[AppMetrics] $source dropped $emptyKeyDrops attribute(s) with empty or whitespace-only keys."
     )
   }
   if (reservedKeyDrops.isNotEmpty()) {
     val formattedKeys = reservedKeyDrops.sorted().joinToString(", ") { "`$it`" }
     Log.w(
       TAG,
-      "[AppMetrics] logEvent dropped attributes that overlap SDK-set keys or use the reserved `expo.` namespace: $formattedKeys."
+      "[AppMetrics] $source dropped attributes that overlap SDK-set keys or use the reserved `expo.` namespace: $formattedKeys."
+    )
+  }
+  if (nonFiniteDrops.isNotEmpty()) {
+    val formattedKeys = nonFiniteDrops.sorted().joinToString(", ") { "`$it`" }
+    Log.w(
+      TAG,
+      "[AppMetrics] $source dropped attributes whose values are not finite numbers (NaN or infinity), which JSON cannot represent: $formattedKeys."
     )
   }
   if (overflowDrops > 0) {
     Log.w(
       TAG,
-      "[AppMetrics] logEvent dropped $overflowDrops attribute(s) past the $MAX_ATTRIBUTE_COUNT-attribute per-record cap."
+      "[AppMetrics] $source dropped $overflowDrops attribute(s) past the $MAX_ATTRIBUTE_COUNT-attribute per-record cap."
     )
   }
 
@@ -121,7 +138,7 @@ internal fun sanitizeLogEventAttributes(attributes: Map<String, Any?>?): Sanitiz
     } else {
       sanitized
     },
-    droppedCount = emptyKeyDrops + reservedKeyDrops.size + overflowDrops
+    droppedCount = emptyKeyDrops + reservedKeyDrops.size + nonFiniteDrops.size + overflowDrops
   )
 }
 
