@@ -455,6 +455,9 @@ PODS:
     - ExpoModulesCore
   - ExpoLocation (57.0.7):
     - ExpoModulesCore
+  - ExpoLocation/Tests (57.0.7):
+    - ExpoModulesCore
+    - ExpoModulesTestCore
   - ExpoLogBox (57.0.2):
     - React-Core
   - ExpoMailComposer (57.0.1):
@@ -3197,6 +3200,7 @@ DEPENDENCIES:
   - ExpoLocalAuthentication (from `../../../packages/expo-local-authentication/ios`)
   - ExpoLocalization (from `../../../packages/expo-localization/ios`)
   - ExpoLocation (from `../../../packages/expo-location/ios`)
+  - ExpoLocation/Tests (from `../../../packages/expo-location/ios`)
   - "ExpoLogBox (from `../../../packages/@expo/log-box`)"
   - ExpoMailComposer (from `../../../packages/expo-mail-composer/ios`)
   - ExpoMaps (from `../../../packages/expo-maps/ios`)
@@ -3908,11 +3912,11 @@ SPEC CHECKSUMS:
   ExpoLivePhoto: 383719af5c54875f877b6ab97fc098974f0e1c86
   ExpoLocalAuthentication: 96989637e567a10cdeabe61e5c6026d30c0dc53f
   ExpoLocalization: 659243b03b3a3e9589793cee2f728a899e181329
-  ExpoLocation: ad64144374a840dd365274b309dbbbb253a1e44e
+  ExpoLocation: 6987813307230c0e7e7cef0a8fe89d31b23eb5c6
   ExpoLogBox: 6bb73c341aca22e699bd4da6cc61afc844e1a648
   ExpoMailComposer: 101933dc6bdb4d7a46495d1dd87420365325adb9
   ExpoMaps: dc3ea592f1b936bab4b5f545f21bd495945fe12e
-  ExpoMediaLibrary: e0829ae4fe90dc8bcd5ec13250ba6503aebbbc94
+  ExpoMediaLibrary: 7bfe9d7ac76561028ffcb1caa143b4436bd5df7b
   ExpoMeshGradient: ade33604a92081a2deda41c6107e7d080493012d
   ExpoModulesCore: 5716f46d38a91abbfbc5a361c240a2ef1ebc11d9
   ExpoModulesJSI: b20fefa4cdd9097e7e6b715466d1900b8c5d4711

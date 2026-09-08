@@ -9,7 +9,7 @@ struct PositionWatcherTests {
   func `start opens the stream with the given profile`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .automotiveNavigation)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
 
     watcher.start()
 
@@ -24,14 +24,14 @@ struct PositionWatcherTests {
   func `pause terminates the stream`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
 
     watcher.pause()
-    #expect(source.stopCount == 1)
 
     await source.nextTermination()
+    #expect(source.terminationCount == 1)
     let status = watcher.status()
     #expect(!status.isSubscribed)
     #expect(status.isPaused)
@@ -42,7 +42,7 @@ struct PositionWatcherTests {
   func `resume after pause opens a new stream and returns true`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
     watcher.pause()
@@ -59,7 +59,7 @@ struct PositionWatcherTests {
   func `resume before start returns false and opens nothing`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
 
     let resumed = watcher.resume()
 
@@ -73,7 +73,7 @@ struct PositionWatcherTests {
   func `restart with nothing staged keeps the stream and returns true`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
 
@@ -89,7 +89,7 @@ struct PositionWatcherTests {
   func `restart after withProfile swaps the stream`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
 
@@ -106,7 +106,7 @@ struct PositionWatcherTests {
   func `restart after withInterval alone swaps the stream`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
 
@@ -123,7 +123,7 @@ struct PositionWatcherTests {
   func `withProfile without restart changes nothing`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
 
@@ -138,7 +138,7 @@ struct PositionWatcherTests {
   func `release terminates the stream and cannot be resumed`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
 
@@ -155,7 +155,7 @@ struct PositionWatcherTests {
   func `a stream that finishes on its own clears isSubscribed and is not reopened`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
 
@@ -171,7 +171,7 @@ struct PositionWatcherTests {
   func `a stale stream ending after a restart does not clear the new one`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     watcher.start()
     _ = await source.nextProfile()
 
@@ -189,7 +189,7 @@ struct PositionWatcherTests {
   func `nil locations are skipped`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     let payloads = PayloadRecorder()
     watcher.send = payloads.record
     watcher.start()
@@ -210,7 +210,7 @@ struct PositionWatcherTests {
   func `two locations closer than the interval send one payload`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     let payloads = PayloadRecorder()
     watcher.send = payloads.record
     watcher.withInterval(1)
@@ -230,7 +230,7 @@ struct PositionWatcherTests {
   func `two locations further apart than the interval send two payloads`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     let payloads = PayloadRecorder()
     watcher.send = payloads.record
     watcher.withInterval(1)
@@ -250,7 +250,7 @@ struct PositionWatcherTests {
   func `a throwing stream sends an error payload and clears isSubscribed`() async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     let payloads = PayloadRecorder()
     watcher.send = payloads.record
     watcher.start()
@@ -268,7 +268,7 @@ struct PositionWatcherTests {
   func `pause suppresses buffered positions and pending errors`(bufferPosition: Bool) async throws {
     let source = FakeUpdatesSource()
     let watcher = PositionWatcher(profile: .default)
-    watcher.makeSource = source.updates
+    watcher.makeStream = source.updates
     let payloads = PayloadRecorder()
     let (paused, pausedContinuation) = AsyncStream.makeStream(of: Void.self)
     watcher.send = { [weak watcher] payload in
@@ -300,12 +300,11 @@ struct PositionWatcherTests {
   func `an immediately finished source can be resumed`() async throws {
     let watcher = PositionWatcher(profile: .default)
     var opens = 0
-    watcher.makeSource = { _ in
+    watcher.makeStream = { _ in
       opens += 1
-      let (stream, continuation) = AsyncThrowingStream.makeStream(of: CLLocation?.self)
-      let source = PositionUpdatesSource(stream: stream, continuation: continuation, stop: {})
+      let (stream, continuation) = PositionUpdates.Stream.makeStream()
       continuation.finish()
-      return source
+      return stream
     }
 
     watcher.start()

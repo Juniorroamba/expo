@@ -5,7 +5,7 @@ final class PositionWatcher: SharedObject {
   static let positionChangedEvent = "positionChanged"
   static var isAppInForeground = true
 
-  var makeSource: (_ profile: Profile) -> PositionUpdatesSource = PositionUpdatesSource.foreground
+  var makeStream: (_ profile: Profile) -> PositionUpdates.Stream = { PositionUpdates.stream(for: $0, allowsBackgroundUpdates: false) }
 
   lazy var send: (_ payload: [String: Any]) -> Void = { [weak self] payload in
     self?.emit(event: Self.positionChangedEvent, payload: payload)
@@ -120,7 +120,7 @@ final class PositionWatcher: SharedObject {
 
   private func startStreaming() {
     subscription = PositionUpdatesSubscription(
-      source: makeSource(activeProfile),
+      stream: makeStream(activeProfile),
       interval: activeInterval,
       onLocation: { [weak self] location in
         self?.send(Self.positionPayload(location))

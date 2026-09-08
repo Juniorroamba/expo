@@ -2,85 +2,97 @@ import CoreLocation
 import Foundation
 
 final class PositionUpdatesSubscription {
-  private let source: PositionUpdatesSource
-  private let interval: TimeInterval
-  private let onLocation: (CLLocation) -> Void
-  private let onError: (Error) -> Void
-  private let lock = NSRecursiveLock()
-  private var lastEmittedAt: Date?
-  private var active = true
+  private let sink: Sink
+  private let task: Task<Void, Never>
 
   init(
-    source: PositionUpdatesSource,
+    stream: PositionUpdates.Stream,
     interval: TimeInterval = 0,
     onLocation: @escaping (CLLocation) -> Void,
     onError: @escaping (Error) -> Void
   ) {
-    self.source = source
-    self.interval = interval
-    self.onLocation = onLocation
-    self.onError = onError
-    Task { @MainActor [weak self] in
+    let sink = Sink(interval: interval, onLocation: onLocation, onError: onError)
+    self.sink = sink
+    self.task = Task { @MainActor [weak sink] in
       do {
-        for try await location in source.stream {
-          guard let self, self.deliver(location) else {
+        for try await location in stream {
+          guard let sink, sink.isActive else {
             break
           }
+          sink.deliver(location)
         }
       } catch {
-        self?.fail(error)
+        sink?.fail(error)
       }
-      source.stop()
-      self?.finish()
+      sink?.deactivate()
     }
   }
 
   var isActive: Bool {
-    lock.withLock {
-      active
-    }
+    sink.isActive
   }
 
   func stop() {
-    lock.withLock {
-      active = false
-    }
-    source.stop()
-  }
-
-  private func deliver(_ location: CLLocation?) -> Bool {
-    lock.withLock {
-      guard active else {
-        return false
-      }
-      guard let location else {
-        return true
-      }
-      if let lastEmittedAt, location.timestamp.timeIntervalSince(lastEmittedAt) < interval {
-        return true
-      }
-      lastEmittedAt = location.timestamp
-      onLocation(location)
-      return true
-    }
-  }
-
-  private func fail(_ error: Error) {
-    lock.withLock {
-      guard active else {
-        return
-      }
-      onError(error)
-    }
-  }
-
-  private func finish() {
-    lock.withLock {
-      active = false
-    }
+    sink.deactivate()
+    task.cancel()
   }
 
   deinit {
     stop()
+  }
+}
+
+private extension PositionUpdatesSubscription {
+  final class Sink {
+    private let lock = NSRecursiveLock()
+    private let interval: TimeInterval
+    private let onLocation: (CLLocation) -> Void
+    private let onError: (Error) -> Void
+    private var lastEmittedAt: Date?
+    private var active = true
+
+    init(interval: TimeInterval, onLocation: @escaping (CLLocation) -> Void, onError: @escaping (Error) -> Void) {
+      self.interval = interval
+      self.onLocation = onLocation
+      self.onError = onError
+    }
+
+    var isActive: Bool {
+      lock.withLock {
+        active
+      }
+    }
+
+    func deactivate() {
+      lock.withLock {
+        active = false
+      }
+    }
+
+    func deliver(_ location: CLLocation?) {
+      lock.withLock {
+        guard active, let location, isOutsideInterval(location) else {
+          return
+        }
+        lastEmittedAt = location.timestamp
+        onLocation(location)
+      }
+    }
+
+    func fail(_ error: Error) {
+      lock.withLock {
+        guard active else {
+          return
+        }
+        onError(error)
+      }
+    }
+
+    private func isOutsideInterval(_ location: CLLocation) -> Bool {
+      guard let lastEmittedAt else {
+        return true
+      }
+      return location.timestamp.timeIntervalSince(lastEmittedAt) >= interval
+    }
   }
 }

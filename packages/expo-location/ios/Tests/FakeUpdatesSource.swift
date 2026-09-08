@@ -5,7 +5,6 @@ import CoreLocation
 final class FakeUpdatesSource: @unchecked Sendable {
   private(set) var openCount = 0
   private(set) var terminationCount = 0
-  private(set) var stopCount = 0
   private(set) var continuations: [AsyncThrowingStream<CLLocation?, Error>.Continuation] = []
   private let profiles: AsyncStream<Profile>
   private let profilesContinuation: AsyncStream<Profile>.Continuation
@@ -19,17 +18,16 @@ final class FakeUpdatesSource: @unchecked Sendable {
     (terminations, terminationsContinuation) = AsyncStream.makeStream(of: Void.self)
   }
 
-  func updates(for profile: Profile) -> PositionUpdatesSource {
+  func updates(for profile: Profile) -> PositionUpdates.Stream {
     openCount += 1
-    let (stream, continuation) = AsyncThrowingStream.makeStream(of: CLLocation?.self)
+    let (stream, continuation) = PositionUpdates.Stream.makeStream()
     continuations.append(continuation)
-    let source = PositionUpdatesSource(stream: stream, continuation: continuation) { [self] in
-      stopCount += 1
+    continuation.onTermination = { [self] _ in
       terminationCount += 1
       terminationsContinuation.yield()
     }
     profilesContinuation.yield(profile)
-    return source
+    return stream
   }
 
   func nextProfile() async -> Profile? {
