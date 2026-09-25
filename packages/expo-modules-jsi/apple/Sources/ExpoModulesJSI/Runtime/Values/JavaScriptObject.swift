@@ -71,6 +71,14 @@ public struct JavaScriptObject: JavaScriptType, Sendable, ~Copyable {
     return pointee.isArrayBuffer(runtime.pointee)
   }
 
+  /// Returns `true` if the object is a typed array, such as `Uint8Array`.
+  internal func isTypedArray() -> Bool {
+    guard let runtime else {
+      FatalError.runtimeLost()
+    }
+    return expo.isTypedArray(runtime.pointee, pointee)
+  }
+
   /// Returns the object as an array buffer, or asserts if not an array buffer.
   public func getArrayBuffer() -> JavaScriptArrayBuffer {
     guard let runtime else {
