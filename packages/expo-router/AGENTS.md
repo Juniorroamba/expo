@@ -24,7 +24,7 @@ File-based routing library for React Native and web applications. It provides au
 │   │   ├── routerConfigContext.ts  # Static router configuration context
 │   │   ├── navigationRef.ts   # Imperative navigation ref
 │   │   ├── routing.ts         # Navigation queue and routing functions
-│   │   ├── getRouteInfoFromState.ts, routeInfoCache.ts, useRouteInfo.ts  # Current route information
+│   │   ├── getRouteInfoFromState.ts, getRouteSegmentsFromState.ts, useRouteInfo.ts  # Current route information
 │   │   └── serverLocationContext.ts  # Server-side location context
 │   │
 │   ├── layouts/               # Navigation layouts
