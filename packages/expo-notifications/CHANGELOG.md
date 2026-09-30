@@ -1,5 +1,11 @@
 # Changelog
 
+## 58.0.10
+
+### Patch Changes
+
+- [Android] Fix notification action buttons going missing after an app update that changes R8 minification, until the app is opened again. ([#50799](https://github.com/expo/expo/pull/50799) by [@icoric4](https://github.com/icoric4))
+
 ## 58.0.9
 
 ### Patch Changes
